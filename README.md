@@ -1,12 +1,15 @@
+---
 title: Data Cleaning Env
 emoji: 🧹
 colorFrom: blue
 colorTo: green
 sdk: docker
+app_file: app.py
 pinned: false
 license: mit
 tags:
   - openenv
+---
 # Data Cleaning OpenEnv
 
 A real-world [OpenEnv](https://openenv.dev) environment where AI agents learn to clean messy datasets.
