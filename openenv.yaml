@@ -1,0 +1,115 @@
+name: data-cleaning-env
+version: "1.0.0"
+description: >
+  A real-world OpenEnv environment where an AI agent learns to clean
+  messy datasets. Simulates data analyst tasks including null imputation,
+  type casting, duplicate removal, outlier clipping, and category
+  standardization across three progressively harder tasks.
+
+author: drax369
+tags:
+  - openenv
+  - data-cleaning
+  - real-world
+  - tabular
+
+tasks:
+  - id: task1
+    name: Patient Intake Null Imputation
+    difficulty: easy
+    description: >
+      Fill missing values in a hospital patient intake CSV with 50 rows.
+      Columns include age, gender, blood pressure, and cholesterol.
+      Agent must choose the correct fill strategy per column.
+    max_steps: 50
+    target_score: 0.95
+
+  - id: task2
+    name: E-Commerce Order Type Fixing
+    difficulty: medium
+    description: >
+      Fix data type errors and remove duplicate rows in an e-commerce
+      orders export. Numeric columns stored as strings must be cast,
+      boolean columns mapped, and 5 injected duplicate rows removed.
+    max_steps: 50
+    target_score: 0.95
+
+  - id: task3
+    name: IoT Sensor Log Full Pipeline
+    difficulty: hard
+    description: >
+      Full cleaning pipeline on an IoT sensor log with 84 rows.
+      Issues include nulls, wrong types, duplicate rows, extreme outliers
+      in temperature/humidity/pressure, and inconsistent status categories.
+    max_steps: 50
+    target_score: 0.95
+
+observation_space:
+  task_id: string
+  step_number: integer
+  dataset_shape: list[int]
+  null_counts: dict[str, int]
+  dtype_issues: dict[str, str]
+  duplicate_count: integer
+  outlier_counts: dict[str, int]
+  columns: list[str]
+  sample_rows: list[dict]
+  message: string
+
+action_space:
+  action_type:
+    type: string
+    values:
+      - fill_null
+      - cast_type
+      - drop_duplicates
+      - clip_outliers
+      - standardize_categories
+  column:
+    type: string
+    optional: true
+  value:
+    type: any
+    optional: true
+  dtype:
+    type: string
+    optional: true
+    values: [float, int, bool, datetime, str]
+  mapping:
+    type: dict
+    optional: true
+  method:
+    type: string
+    optional: true
+    values: [median, mean, mode, ffill, bfill]
+
+reward_space:
+  score:
+    type: float
+    range: [0.0, 1.0]
+  null_score:
+    type: float
+    range: [0.0, 1.0]
+  dtype_score:
+    type: float
+    range: [0.0, 1.0]
+  duplicate_score:
+    type: float
+    range: [0.0, 1.0]
+  outlier_score:
+    type: float
+    range: [0.0, 1.0]
+  efficiency_penalty:
+    type: float
+    range: [0.0, 0.2]
+  done: boolean
+
+api:
+  reset: "Returns initial Observation. Loads fresh dirty dataset."
+  step: "Takes Action, returns (Observation, Reward, done, info)."
+  state: "Returns EnvironmentState snapshot."
+
+runtime:
+  python: ">=3.11"
+  memory: "<=8gb"
+  inference_timeout_minutes: 20
