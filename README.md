@@ -134,6 +134,58 @@ obs, reward, done, info = env.step(action)
 print(reward.score)  # 0.304
 ```
 
+## Known limitations & future work
+
+### Imputation bias on imbalanced categorical columns
+The current environment trains the agent to fill null categorical values
+using mode (most frequent value). This works well for balanced columns
+but introduces **imputation bias** on imbalanced ones.
+
+**Example:** A gender column with 80% male and 20% female entries will
+cause the agent to fill every missing gender as "Male" — statistically
+defensible but factually incorrect and harmful in health or demographic
+datasets where the null itself may carry meaning (e.g. the person chose
+not to disclose).
+
+**What a production system should do instead:**
+- Flag nulls in sensitive columns (gender, race, income) as `"Unknown"`
+  rather than imputing them
+- Detect column imbalance before choosing a fill strategy
+- Treat the null as meaningful data in survey or opt-in contexts
+
+This is a known open problem in automated data cleaning and a natural
+direction for future work.
+
+---
+
+### Duplicate removal preserves one copy
+`drop_duplicates()` keeps the first occurrence of a duplicated row and
+removes all subsequent ones. So 5 identical rows become 1 — no data is
+lost, only redundancy is removed. This is correct behavior for accidental
+duplicates (e.g. a form submitted twice) but may be inappropriate when
+duplicates carry legitimate meaning (e.g. two patients with identical
+intake data who are genuinely different people).
+
+A future improvement would be to expose a `keep` parameter in the action
+space (`first`, `last`, or `none`) so the agent can choose the right
+strategy per context.
+
+---
+
+### Outlier clipping vs removal
+The current environment clips outliers to boundary values rather than
+removing the row. This preserves dataset size but may introduce
+artificial boundary clustering. Future work could add a
+`drop_outliers` action alongside `clip_outliers`.
+
+---
+
+### Static task difficulty
+The three tasks have fixed schemas and fixed dirty patterns. A more
+robust environment would procedurally generate dirty datasets with
+varying column types, imbalance ratios, and issue combinations so the
+agent cannot overfit to the specific task structure.
+
 ## Project Structure
 ```
 data-cleaning-env/
