@@ -1,0 +1,23 @@
+[project]
+name = "data-cleaning-env"
+version = "1.0.0"
+description = "Data Cleaning OpenEnv for Scaler Hackathon"
+requires-python = ">=3.11"
+
+dependencies = [
+    "fastapi",
+    "uvicorn[standard]",
+    "openai",
+    "pandas",
+    "numpy",
+    "pydantic",
+    "pyyaml",
+    "scikit-learn",
+]
+
+[project.scripts]
+serve = "app:app"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.backends.legacy:build"
