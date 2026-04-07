@@ -9,7 +9,7 @@ from environment.models import Action
 # ------------------------------------------------------------------ #
 API_BASE_URL = os.environ.get("API_BASE_URL", "https://api.openai.com/v1")
 MODEL_NAME   = os.environ.get("MODEL_NAME",   "gpt-4o-mini")
-HF_TOKEN     = os.environ.get("HF_TOKEN",     "")
+HF_TOKEN = os.environ.get("HF_TOKEN")
 
 client = OpenAI(
     api_key  = HF_TOKEN if HF_TOKEN else os.environ.get("OPENAI_API_KEY", ""),
@@ -58,9 +58,7 @@ If all issues are resolved respond with: {{"action_type": "done"}}
 #  single task runner                                                  #
 # ------------------------------------------------------------------ #
 def run_task(task_id: str) -> float:
-    print(f"\n{'='*50}")
-    print(f"Running {task_id.upper()}")
-    print(f"{'='*50}")
+    print(f"START {task_id}")
 
     env = DataCleaningEnv(task_id)
     obs = env.reset()
@@ -91,28 +89,27 @@ def run_task(task_id: str) -> float:
             action_dict = json.loads(raw)
 
         except json.JSONDecodeError as e:
-            print(f"  Step {step+1}: JSON parse error — {e}")
+            print(f"STEP {task_id} step={step+1} error=json_parse_error")
             continue
         except Exception as e:
-            print(f"  Step {step+1}: API error — {e}")
+            print(f"STEP {task_id} step={step+1} error=api_error")
             break
 
         # agent signals it is done
         if action_dict.get("action_type") == "done":
-            print(f"  Step {step+1}: Agent signalled done.")
+            print(f"STEP {task_id} step={step+1} action=done score={final_score}")
             break
 
         action = Action(**action_dict)
         obs, reward, done, info = env.step(action)
         final_score = reward.score
 
-        print(f"  Step {step+1:2d}: {info.get('action_result', action_dict.get('action_type'))} → score: {reward.score:.3f}")
+        print(f"STEP {task_id} step={step+1} action={action_dict.get('action_type')} column={action_dict.get('column', 'N/A')} score={final_score:.3f}")
 
         if done:
-            print(f"  Episode finished at step {step+1}.")
             break
 
-    print(f"  Final score for {task_id}: {final_score:.3f}")
+    print(f"END {task_id} score={final_score:.3f}")
     return final_score
 
 
@@ -120,21 +117,13 @@ def run_task(task_id: str) -> float:
 #  main                                                                #
 # ------------------------------------------------------------------ #
 if __name__ == "__main__":
-    print("Data Cleaning OpenEnv — Baseline Inference")
-    print(f"Model   : {MODEL_NAME}")
-    print(f"Base URL: {API_BASE_URL}")
+    print("START inference")
+    print(f"STEP config model={MODEL_NAME} base_url={API_BASE_URL}")
 
     scores = {}
     for task_id in ["task1", "task2", "task3"]:
         scores[task_id] = run_task(task_id)
 
-    print(f"\n{'='*50}")
-    print("FINAL SCORES")
-    print(f"{'='*50}")
-    for task_id, score in scores.items():
-        bar = "█" * int(score * 20)
-        print(f"  {task_id}: {score:.3f}  {bar}")
-
+    print("STEP results " + " ".join([f"{k}={v:.3f}" for k, v in scores.items()]))
     avg = sum(scores.values()) / len(scores)
-    print(f"\n  Average: {avg:.3f}")
-    print(f"{'='*50}")
+    print(f"END inference avg_score={avg:.3f}")
