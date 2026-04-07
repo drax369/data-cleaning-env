@@ -45,6 +45,14 @@ def get_spec():
 # ------------------------------------------------------------------ #
 #  core API endpoints                                                  #
 # ------------------------------------------------------------------ #
+@app.post("/reset")
+def reset_all():
+    results = {}
+    for task_id, env in envs.items():
+        obs = env.reset()
+        results[task_id] = obs.model_dump()
+    return JSONResponse({"status": "ok", "observations": results})
+
 @app.post("/reset/{task_id}")
 def reset(task_id: str):
     if task_id not in envs:
