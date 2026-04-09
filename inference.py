@@ -14,15 +14,12 @@ try:
         base_url = API_BASE_URL,
     )
 except Exception as e:
-    print(f"END inference error=client_init_failed details={e}")
+    print(f"[END] task=init score=0.0 steps=0 error=client_init_failed", flush=True)
     raise
 
-MAX_STEPS = 20  # keep inference fast — well within 20 min limit
+MAX_STEPS = 20
 
 
-# ------------------------------------------------------------------ #
-#  prompt builder                                                      #
-# ------------------------------------------------------------------ #
 def build_prompt(obs, task_id: str) -> str:
     return f"""You are a data cleaning agent. Your job is to clean a messy dataset.
 
@@ -43,27 +40,24 @@ SAMPLE ROWS (first 3):
 LAST MESSAGE: {obs.message}
 
 AVAILABLE ACTIONS:
-1. fill_null       — {{"action_type": "fill_null", "column": "<col>", "method": "median|mean|mode|ffill|bfill"}}
-2. cast_type       — {{"action_type": "cast_type", "column": "<col>", "dtype": "float|int|bool|datetime|str"}}
-3. drop_duplicates — {{"action_type": "drop_duplicates"}}
-4. clip_outliers   — {{"action_type": "clip_outliers", "column": "<col>", "value": {{"low": <n>, "high": <n>}}}}
-5. standardize_categories — {{"action_type": "standardize_categories", "column": "<col>"}}
+1. fill_null       - {{"action_type": "fill_null", "column": "<col>", "method": "median|mean|mode|ffill|bfill"}}
+2. cast_type       - {{"action_type": "cast_type", "column": "<col>", "dtype": "float|int|bool|datetime|str"}}
+3. drop_duplicates - {{"action_type": "drop_duplicates"}}
+4. clip_outliers   - {{"action_type": "clip_outliers", "column": "<col>", "value": {{"low": <n>, "high": <n>}}}}
+5. standardize_categories - {{"action_type": "standardize_categories", "column": "<col>"}}
 
 Respond with ONLY a JSON object for the single best next action.
-Pick the most impactful action based on the current issues.
 If all issues are resolved respond with: {{"action_type": "done"}}
 """
 
 
-# ------------------------------------------------------------------ #
-#  single task runner                                                  #
-# ------------------------------------------------------------------ #
 def run_task(task_id: str) -> float:
-    print(f"START {task_id}")
+    print(f"[START] task={task_id}", flush=True)
 
     env = DataCleaningEnv(task_id)
     obs = env.reset()
     final_score = 0.0
+    step_count  = 0
 
     for step in range(MAX_STEPS):
         prompt = build_prompt(obs, task_id)
@@ -80,7 +74,6 @@ def run_task(task_id: str) -> float:
             )
             raw = response.choices[0].message.content.strip()
 
-            # strip markdown fences if model adds them
             if raw.startswith("```"):
                 raw = raw.split("```")[1]
                 if raw.startswith("json"):
@@ -89,42 +82,45 @@ def run_task(task_id: str) -> float:
 
             action_dict = json.loads(raw)
 
-        except json.JSONDecodeError as e:
-            print(f"STEP {task_id} step={step+1} error=json_parse_error")
+        except json.JSONDecodeError:
+            print(f"[STEP] task={task_id} step={step+1} reward={final_score:.3f} error=json_parse", flush=True)
             continue
         except Exception as e:
-            print(f"STEP {task_id} step={step+1} error=api_error")
+            print(f"[STEP] task={task_id} step={step+1} reward={final_score:.3f} error=api_error", flush=True)
             break
 
-        # agent signals it is done
         if action_dict.get("action_type") == "done":
-            print(f"STEP {task_id} step={step+1} action=done score={final_score}")
+            print(f"[STEP] task={task_id} step={step+1} reward={final_score:.3f} action=done", flush=True)
             break
 
-        action = Action(**action_dict)
-        obs, reward, done, info = env.step(action)
-        final_score = reward.score
+        try:
+            action = Action(**action_dict)
+            obs, reward, done, info = env.step(action)
+            final_score = reward.score
+            step_count  = step + 1
+        except Exception as e:
+            print(f"[STEP] task={task_id} step={step+1} reward={final_score:.3f} error=step_failed", flush=True)
+            continue
 
-        print(f"STEP {task_id} step={step+1} action={action_dict.get('action_type')} column={action_dict.get('column', 'N/A')} score={final_score:.3f}")
+        print(f"[STEP] task={task_id} step={step+1} reward={final_score:.3f} action={action_dict.get('action_type')} column={action_dict.get('column', 'N/A')}", flush=True)
 
         if done:
+            step_count = step + 1
             break
 
-    print(f"END {task_id} score={final_score:.3f}")
+    print(f"[END] task={task_id} score={final_score:.3f} steps={step_count}", flush=True)
     return final_score
 
 
-# ------------------------------------------------------------------ #
-#  main                                                                #
-# ------------------------------------------------------------------ #
 if __name__ == "__main__":
-    print("START inference")
-    print(f"STEP config model={MODEL_NAME} base_url={API_BASE_URL}")
+    print(f"[START] task=inference model={MODEL_NAME}", flush=True)
 
     scores = {}
     for task_id in ["task1", "task2", "task3"]:
         scores[task_id] = run_task(task_id)
 
-    print("STEP results " + " ".join([f"{k}={v:.3f}" for k, v in scores.items()]))
     avg = sum(scores.values()) / len(scores)
-    print(f"END inference avg_score={avg:.3f}")
+    for task_id, score in scores.items():
+        print(f"[STEP] task=results {task_id}={score:.3f}", flush=True)
+
+    print(f"[END] task=inference score={avg:.3f} steps={MAX_STEPS}", flush=True)
