@@ -4,17 +4,18 @@ from openai import OpenAI
 from environment.env import DataCleaningEnv
 from environment.models import Action
 
-# ------------------------------------------------------------------ #
-#  credentials — read from environment variables                       #
-# ------------------------------------------------------------------ #
 API_BASE_URL = os.environ.get("API_BASE_URL", "https://api.openai.com/v1")
-MODEL_NAME   = os.environ.get("MODEL_NAME",   "gpt-4o-mini")
-HF_TOKEN = os.environ.get("HF_TOKEN")
+MODEL_NAME   = os.environ.get("MODEL_NAME", "gpt-4o-mini")
+HF_TOKEN     = os.environ.get("HF_TOKEN")
 
-client = OpenAI(
-    api_key  = HF_TOKEN if HF_TOKEN else os.environ.get("OPENAI_API_KEY", ""),
-    base_url = API_BASE_URL,
-)
+try:
+    client = OpenAI(
+        api_key  = HF_TOKEN or "dummy-key",
+        base_url = API_BASE_URL,
+    )
+except Exception as e:
+    print(f"END inference error=client_init_failed details={e}")
+    raise
 
 MAX_STEPS = 20  # keep inference fast — well within 20 min limit
 
