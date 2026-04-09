@@ -144,6 +144,7 @@ def grade_task3(df: pd.DataFrame, expected: Dict, step_number: int) -> Tuple[flo
     efficiency_penalty = round(min(0.2, step_number * 0.005), 3)
     final_score = clamp(combined - efficiency_penalty)
 
+
     info = {
         "null_score":          null_score,
         "dtype_score":         dtype_score,
