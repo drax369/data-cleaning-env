@@ -11,13 +11,13 @@ tags:
   - openenv
 ---
 # Data Cleaning OpenEnv
-![System Flow](docs/flow.png)
+![System Flow](docs/flow.svg)
 A real-world [OpenEnv](https://openenv.dev) environment where AI agents learn to clean messy datasets.
 Built for the Meta AI Hackathon.
 
 ## What it simulates
 
-A data analyst receiving dirty CSV files and cleaning them systematically.
+A data analyst receiving dirty CSV files and cleaning them systematically.s
 Issues include missing values, wrong data types, duplicate rows, outliers,
 and inconsistent category labels — problems found in every real-world dataset.
 
