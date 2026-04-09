@@ -2,6 +2,10 @@ import pandas as pd
 import numpy as np
 from typing import Dict, Tuple
 
+def clamp(score: float) -> float:
+    """Ensure score is strictly between 0 and 1 (exclusive)."""
+    return round(max(0.001, min(0.999, score)), 3)
+
 
 def grade_task1(df: pd.DataFrame, expected: Dict, step_number: int) -> Tuple[float, Dict]:
     """
@@ -26,7 +30,7 @@ def grade_task1(df: pd.DataFrame, expected: Dict, step_number: int) -> Tuple[flo
 
     # efficiency penalty — too many steps wastes score
     efficiency_penalty = round(min(0.2, step_number * 0.01), 3)
-    final_score = round(max(0.0, null_score - efficiency_penalty), 3)
+    final_score = clamp(null_score - efficiency_penalty)
 
     info = {
         "column_scores": scores,
@@ -76,7 +80,7 @@ def grade_task2(df: pd.DataFrame, expected: Dict, step_number: int) -> Tuple[flo
 
     # efficiency penalty
     efficiency_penalty = round(min(0.2, step_number * 0.008), 3)
-    final_score = round(max(0.0, combined - efficiency_penalty), 3)
+    final_score = clamp(combined - efficiency_penalty)
 
     info = {
         "type_scores":       type_scores,
@@ -138,7 +142,7 @@ def grade_task3(df: pd.DataFrame, expected: Dict, step_number: int) -> Tuple[flo
 
     # efficiency penalty
     efficiency_penalty = round(min(0.2, step_number * 0.005), 3)
-    final_score = round(max(0.0, combined - efficiency_penalty), 3)
+    final_score = clamp(combined - efficiency_penalty)
 
     info = {
         "null_score":          null_score,
