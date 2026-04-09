@@ -11,7 +11,7 @@ tags:
   - openenv
 ---
 # Data Cleaning OpenEnv
-
+![System Flow](docs/flow.png)
 A real-world [OpenEnv](https://openenv.dev) environment where AI agents learn to clean messy datasets.
 Built for the Meta AI Hackathon.
 
@@ -120,6 +120,87 @@ docker run -p 7860:7860 \
 | POST | `/step/{task_id}` | Submit action, get observation + reward |
 | GET | `/state/{task_id}` | Get current environment state |
 | GET | `/openenv.yaml` | OpenEnv spec metadata |
+
+## Worked episode — full walkthrough
+
+Here is a complete real episode on task1 showing reset → step → step → done with actual JSON.
+
+**Step 1 — reset the environment**
+```json
+POST /reset/task1
+
+Response:
+{
+  "task_id": "task1",
+  "step_number": 0,
+  "dataset_shape": [50, 5],
+  "null_counts": {"patient_id": 0, "age": 14, "gender": 12, "blood_pressure": 17, "cholesterol": 12},
+  "dtype_issues": {"gender": "object — sample: ['Male', 'Female', 'Male']"},
+  "duplicate_count": 0,
+  "outlier_counts": {},
+  "columns": ["patient_id", "age", "gender", "blood_pressure", "cholesterol"],
+  "sample_rows": [
+    {"patient_id": "1001", "age": "25.0", "gender": "Male", "blood_pressure": "120.0", "cholesterol": "180.0"},
+    {"patient_id": "1002", "age": "34.0", "gender": "Female", "blood_pressure": "NULL", "cholesterol": "220.0"},
+    {"patient_id": "1003", "age": "NULL", "gender": "NULL", "blood_pressure": "135.0", "cholesterol": "195.0"}
+  ],
+  "message": "Environment reset. Ready for cleaning."
+}
+```
+
+**Step 2 — fill nulls in age column**
+```json
+POST /step/task1
+Body: {"action_type": "fill_null", "column": "age", "method": "median"}
+
+Response:
+{
+  "observation": {"step_number": 1, "null_counts": {"age": 0, "gender": 12, "blood_pressure": 17, "cholesterol": 12}},
+  "reward": {"score": 0.304, "null_score": 0.304, "done": false},
+  "info": {"action_result": "Filled 14 nulls in 'age' using median"}
+}
+```
+
+**Step 3 — fill nulls in gender column**
+```json
+POST /step/task1
+Body: {"action_type": "fill_null", "column": "gender", "method": "mode"}
+
+Response:
+{
+  "observation": {"step_number": 2, "null_counts": {"age": 0, "gender": 0, "blood_pressure": 17, "cholesterol": 12}},
+  "reward": {"score": 0.558, "null_score": 0.558, "done": false},
+  "info": {"action_result": "Filled 12 nulls in 'gender' using mode"}
+}
+```
+
+**Step 4 — fill nulls in blood_pressure**
+```json
+POST /step/task1
+Body: {"action_type": "fill_null", "column": "blood_pressure", "method": "median"}
+
+Response:
+{
+  "observation": {"step_number": 3, "null_counts": {"age": 0, "gender": 0, "blood_pressure": 0, "cholesterol": 12}},
+  "reward": {"score": 0.771, "null_score": 0.771, "done": false},
+  "info": {"action_result": "Filled 17 nulls in 'blood_pressure' using median"}
+}
+```
+
+**Step 5 — fill nulls in cholesterol — episode done**
+```json
+POST /step/task1
+Body: {"action_type": "fill_null", "column": "cholesterol", "method": "median"}
+
+Response:
+{
+  "observation": {"step_number": 4, "null_counts": {"age": 0, "gender": 0, "blood_pressure": 0, "cholesterol": 0}},
+  "reward": {"score": 0.950, "null_score": 0.950, "done": true},
+  "info": {"action_result": "Filled 12 nulls in 'cholesterol' using median"}
+}
+```
+
+Score climbed: `0.0 → 0.304 → 0.558 → 0.771 → 0.950` in 4 steps. Episode complete.
 
 ## Episode Example
 ```python
