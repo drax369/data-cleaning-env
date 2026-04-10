@@ -1,9 +1,11 @@
+import numpy as np
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse
+from fastapi.encoders import jsonable_encoder
 from environment.env import DataCleaningEnv
 from environment.models import Action
 from typing import Dict
-import yaml
+import json
 
 app = FastAPI(
     title       = "Data Cleaning OpenEnv",
@@ -11,7 +13,6 @@ app = FastAPI(
     version     = "1.0.0",
 )
 
-# one environment instance per task — kept in memory
 envs: Dict[str, DataCleaningEnv] = {
     "task1": DataCleaningEnv("task1"),
     "task2": DataCleaningEnv("task2"),
@@ -19,9 +20,23 @@ envs: Dict[str, DataCleaningEnv] = {
 }
 
 
-# ------------------------------------------------------------------ #
-#  health check — hackathon checker pings this                        #
-# ------------------------------------------------------------------ #
+def clean(obj):
+    """Recursively convert numpy types to native Python for JSON."""
+    if isinstance(obj, dict):
+        return {k: clean(v) for k, v in obj.items()}
+    elif isinstance(obj, (list, tuple)):
+        return [clean(v) for v in obj]
+    elif isinstance(obj, np.integer):
+        return int(obj)
+    elif isinstance(obj, np.floating):
+        return float(obj)
+    elif isinstance(obj, np.ndarray):
+        return obj.tolist()
+    elif isinstance(obj, np.bool_):
+        return bool(obj)
+    return obj
+
+
 @app.get("/")
 def root():
     return {"status": "ok", "name": "data-cleaning-env", "version": "1.0.0"}
@@ -32,9 +47,6 @@ def health():
     return {"status": "ok"}
 
 
-# ------------------------------------------------------------------ #
-#  openenv spec                                                        #
-# ------------------------------------------------------------------ #
 @app.get("/openenv.yaml")
 def get_spec():
     with open("openenv.yaml", "r") as f:
@@ -42,23 +54,12 @@ def get_spec():
     return JSONResponse(content={"spec": content})
 
 
-# ------------------------------------------------------------------ #
-#  core API endpoints                                                  #
-# ------------------------------------------------------------------ #
-@app.post("/reset")
-def reset_all():
-    results = {}
-    for task_id, env in envs.items():
-        obs = env.reset()
-        results[task_id] = obs.model_dump()
-    return JSONResponse({"status": "ok", "observations": results})
-
 @app.post("/reset/{task_id}")
 def reset(task_id: str):
     if task_id not in envs:
         raise HTTPException(status_code=404, detail=f"Unknown task: {task_id}")
     obs = envs[task_id].reset()
-    return obs.model_dump()
+    return JSONResponse(content=clean(obs.model_dump()))
 
 
 @app.post("/step/{task_id}")
@@ -68,13 +69,20 @@ def step(task_id: str, action: Action):
     env = envs[task_id]
     if env.df is None:
         raise HTTPException(status_code=400, detail="Call /reset/{task_id} first")
-    obs, reward, done, info = env.step(action)
-    return {
-        "observation": obs.model_dump(),
-        "reward":      reward.model_dump(),
-        "done":        done,
-        "info":        info,
-    }
+    try:
+        obs, reward, done, info = env.step(action)
+        result = clean({
+            "observation": obs.model_dump(),
+            "reward":      reward.model_dump(),
+            "done":        done,
+            "info":        info,
+        })
+        return JSONResponse(content=result)
+    except Exception as e:
+        import traceback
+        tb = traceback.format_exc()
+        print(f"STEP ERROR task={task_id}: {tb}", flush=True)
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.get("/state/{task_id}")
@@ -84,12 +92,9 @@ def state(task_id: str):
     env = envs[task_id]
     if env.df is None:
         raise HTTPException(status_code=400, detail="Call /reset/{task_id} first")
-    return envs[task_id].state().model_dump()
+    return JSONResponse(content=clean(envs[task_id].state().model_dump()))
 
 
-# ------------------------------------------------------------------ #
-#  list all tasks                                                      #
-# ------------------------------------------------------------------ #
 @app.get("/tasks")
 def list_tasks():
     return {

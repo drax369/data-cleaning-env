@@ -5,7 +5,15 @@ from typing import Dict, Tuple
 
 def clamp(score: float) -> float:
     return round(max(0.001, min(0.999, float(score))), 3)
-
+def to_python(obj):
+    """Convert numpy types to native Python types for JSON serialization."""
+    if isinstance(obj, dict):
+        return {k: to_python(v) for k, v in obj.items()}
+    elif isinstance(obj, (list, tuple)):
+        return [to_python(v) for v in obj]
+    elif hasattr(obj, 'item'):
+        return obj.item()
+    return obj
 
 def grade_task1(df: pd.DataFrame, expected: Dict, step_number: int) -> Tuple[float, Dict]:
     scores = {}
@@ -33,7 +41,7 @@ def grade_task1(df: pd.DataFrame, expected: Dict, step_number: int) -> Tuple[flo
         "remaining_nulls": int(df.isnull().sum().sum())
     }
 
-    return final_score, info
+    return final_score, to_python(info)
 
 
 def grade_task2(df: pd.DataFrame, expected: Dict, step_number: int) -> Tuple[float, Dict]:
@@ -77,7 +85,7 @@ def grade_task2(df: pd.DataFrame, expected: Dict, step_number: int) -> Tuple[flo
         "efficiency_penalty": efficiency_penalty,
     }
 
-    return final_score, info
+    return final_score, to_python(info)
 
 
 def grade_task3(df: pd.DataFrame, expected: Dict, step_number: int) -> Tuple[float, Dict]:
@@ -132,7 +140,7 @@ def grade_task3(df: pd.DataFrame, expected: Dict, step_number: int) -> Tuple[flo
         "remaining_dupes":     remaining_dupes,
     }
 
-    return final_score, info
+    return final_score, to_python(info)
 
 
 GRADERS = {

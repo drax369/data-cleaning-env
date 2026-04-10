@@ -39,7 +39,7 @@ class DataCleaningEnv:
     def step(self, action: Action) -> Tuple[Observation, Reward, bool, Dict]:
         if self.done:
             obs = self._make_observation("Episode already finished. Call reset().")
-            reward = self._make_reward(0.0, {})
+            reward = self._make_reward(0.001, {})
             return obs, reward, True, {"error": "Episode done"}
 
         if self.df is None:
@@ -48,27 +48,28 @@ class DataCleaningEnv:
         self.step_count += 1
         info = {}
 
-        # ---- dispatch action ----------------------------------------- #
         try:
             info = self._apply_action(action)
         except Exception as e:
-            info = {"error": str(e)}
+            info = {"error": str(e), "action_result": f"Action failed: {str(e)}"}
 
-        # ---- score the new state ------------------------------------- #
-        score, grade_info = GRADERS[self.task_id](
-            self.df, self.expected, self.step_count
-        )
-        self.current_score = score
+        try:
+            score, grade_info = GRADERS[self.task_id](
+                self.df, self.expected, self.step_count
+            )
+        except Exception as e:
+            score = 0.001
+            grade_info = {"error": str(e)}
+
+        self.current_score = max(0.001, min(0.999, float(score)))
         info.update(grade_info)
 
-        # ---- check termination --------------------------------------- #
-        if score >= 0.95 or self.step_count >= MAX_STEPS:
+        if self.current_score >= 0.95 or self.step_count >= MAX_STEPS:
             self.done = True
 
         obs    = self._make_observation(info.get("action_result", ""))
-        reward = self._make_reward(score, grade_info)
+        reward = self._make_reward(self.current_score, grade_info)
         return obs, reward, self.done, info
-
     # ------------------------------------------------------------------ #
     #  state()                                                             #
     # ------------------------------------------------------------------ #
@@ -106,8 +107,8 @@ class DataCleaningEnv:
     # ------------------------------------------------------------------ #
     def _fill_null(self, action: Action) -> Dict:
         col = action.column
-        if col not in self.df.columns:
-            return {"action_result": f"Column '{col}' not found"}
+        if col is None or col not in self.df.columns:
+            return {"action_result": f"Column '{col}' not found — skipped"}
 
         before = int(self.df[col].isnull().sum())
         if before == 0:
@@ -116,20 +117,23 @@ class DataCleaningEnv:
         method = action.method or "median"
         value  = action.value
 
-        if value is not None:
-            self.df[col] = self.df[col].fillna(value)
-        elif method == "median":
-            self.df[col] = self.df[col].fillna(self.df[col].median())
-        elif method == "mean":
-            self.df[col] = self.df[col].fillna(self.df[col].mean())
-        elif method == "mode":
-            self.df[col] = self.df[col].fillna(self.df[col].mode()[0])
-        elif method == "ffill":
-            self.df[col] = self.df[col].ffill()
-        elif method == "bfill":
-            self.df[col] = self.df[col].bfill()
-        else:
-            return {"action_result": f"Unknown fill method: {method}"}
+        try:
+            if value is not None:
+                self.df[col] = self.df[col].fillna(value)
+            elif method == "median":
+                self.df[col] = self.df[col].fillna(self.df[col].median())
+            elif method == "mean":
+                self.df[col] = self.df[col].fillna(self.df[col].mean())
+            elif method == "mode":
+                self.df[col] = self.df[col].fillna(self.df[col].mode()[0])
+            elif method == "ffill":
+                self.df[col] = self.df[col].ffill()
+            elif method == "bfill":
+                self.df[col] = self.df[col].bfill()
+            else:
+                return {"action_result": f"Unknown fill method: {method}"}
+        except Exception as e:
+            return {"action_result": f"Fill failed on '{col}': {str(e)}"}
 
         after = int(self.df[col].isnull().sum())
         return {"action_result": f"Filled {before - after} nulls in '{col}' using {method}"}
