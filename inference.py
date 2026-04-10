@@ -145,7 +145,7 @@ def run_task(task_id: str) -> float:
         try:
             action = Action(**action_dict)
             obs, reward, done, info = env.step(action)
-            final_score = reward.score
+            final_score = max(0.001, min(0.999, reward.score))
             step_count  = step + 1
         except Exception:
             print(f"[STEP] task={task_id} step={step+1} reward={final_score:.3f} error=step_failed", flush=True)
