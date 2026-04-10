@@ -30,7 +30,7 @@ class DataCleaningEnv:
         self.expected     = expected
         self.step_count   = 0
         self.done         = False
-        self.current_score = 0.0
+        self.current_score = 0.001
         return self._make_observation("Environment reset. Ready for cleaning.")
 
     # ------------------------------------------------------------------ #
@@ -78,9 +78,9 @@ class DataCleaningEnv:
             step_number   = self.step_count,
             max_steps     = MAX_STEPS,
             done          = self.done,
-            current_score = self.current_score,
+            current_score = max(0.001, min(0.999, self.current_score)),
             dataset_shape = list(self.df.shape) if self.df is not None else [0, 0],
-        )
+    )
 
     # ------------------------------------------------------------------ #
     #  action dispatcher                                                   #

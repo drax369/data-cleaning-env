@@ -40,5 +40,5 @@ class EnvironmentState(BaseModel):
     step_number: int
     max_steps: int
     done: bool
-    current_score: float
+    current_score: float = Field(gt=0.0, lt=1.0)
     dataset_shape: List[int]
