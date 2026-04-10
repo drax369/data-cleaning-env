@@ -46,6 +46,40 @@ def root():
 def health():
     return {"status": "ok"}
 
+@app.post("/reset")
+def reset_default():
+    """OpenEnv standard reset — defaults to task1"""
+    obs = envs["task1"].reset()
+    return JSONResponse(content=clean(obs.model_dump()))
+
+
+@app.post("/step")
+def step_default(action: Action):
+    """OpenEnv standard step — defaults to task1"""
+    env = envs["task1"]
+    if env.df is None:
+        env.reset()
+    try:
+        obs, reward, done, info = env.step(action)
+        return JSONResponse(content=clean({
+            "observation": obs.model_dump(),
+            "reward":      reward.model_dump(),
+            "done":        done,
+            "info":        info,
+        }))
+    except Exception as e:
+        import traceback
+        print(traceback.format_exc(), flush=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/state")
+def state_default():
+    """OpenEnv standard state — defaults to task1"""
+    env = envs["task1"]
+    if env.df is None:
+        env.reset()
+    return JSONResponse(content=clean(env.state().model_dump()))
 
 @app.get("/openenv.yaml")
 def get_spec():
