@@ -244,13 +244,15 @@ class DataCleaningEnv:
         )
 
     def _make_reward(self, score: float, grade_info: Dict) -> Reward:
+        def c(v):
+            return float(max(0.001, min(0.999, v)))
         return Reward(
-            score              = float(score),
-            null_score         = float(grade_info.get("null_score", 0.0)),
-            dtype_score        = float(grade_info.get("dtype_score", 0.0)),
-            duplicate_score    = float(grade_info.get("duplicate_score", 0.0)),
-            outlier_score      = float(grade_info.get("outlier_score", 0.0)),
-            efficiency_penalty = float(grade_info.get("efficiency_penalty", 0.0)),
+            score              = c(score),
+            null_score         = c(grade_info.get("null_score", 0.001)),
+            dtype_score        = c(grade_info.get("dtype_score", 0.001)),
+            duplicate_score    = c(grade_info.get("duplicate_score", 0.001)),
+            outlier_score      = c(grade_info.get("outlier_score", 0.001)),
+            efficiency_penalty = c(grade_info.get("efficiency_penalty", 0.001)),
             done               = self.done,
             info               = grade_info,
-        )
+    )
