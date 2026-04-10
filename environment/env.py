@@ -79,7 +79,7 @@ class DataCleaningEnv:
             step_number   = self.step_count,
             max_steps     = MAX_STEPS,
             done          = self.done,
-            current_score = max(0.001, min(0.999, self.current_score)),
+            current_score = round(max(0.001, min(0.998, self.current_score)), 3),
             dataset_shape = list(self.df.shape) if self.df is not None else [0, 0],
     )
 
@@ -248,15 +248,15 @@ class DataCleaningEnv:
         )
 
     def _make_reward(self, score: float, grade_info: Dict) -> Reward:
-        def c(v):
-            return float(max(0.001, min(0.999, v)))
+        def s(v):
+            return round(max(0.001, min(0.998, float(v or 0.001))), 3)
         return Reward(
-            score              = c(score),
-            null_score         = c(grade_info.get("null_score", 0.001)),
-            dtype_score        = c(grade_info.get("dtype_score", 0.001)),
-            duplicate_score    = c(grade_info.get("duplicate_score", 0.001)),
-            outlier_score      = c(grade_info.get("outlier_score", 0.001)),
-            efficiency_penalty = c(grade_info.get("efficiency_penalty", 0.001)),
+            score              = s(score),
+            null_score         = s(grade_info.get("null_score",         0.001)),
+            dtype_score        = s(grade_info.get("dtype_score",        0.001)),
+            duplicate_score    = s(grade_info.get("duplicate_score",    0.001)),
+            outlier_score      = s(grade_info.get("outlier_score",      0.001)),
+            efficiency_penalty = s(grade_info.get("efficiency_penalty", 0.001)),
             done               = self.done,
             info               = grade_info,
     )

@@ -25,12 +25,12 @@ class Action(BaseModel):
 
 
 class Reward(BaseModel):
-    score: float = Field(ge=0.0, le=1.0)
-    null_score: float = Field(ge=0.0, le=1.0)
-    dtype_score: float = Field(ge=0.0, le=1.0)
-    duplicate_score: float = Field(ge=0.0, le=1.0)
-    outlier_score: float = Field(ge=0.0, le=1.0)
-    efficiency_penalty: float = Field(ge=0.0, le=1.0)
+    score: float = Field(gt=0.0, lt=1.0)
+    null_score: float = Field(gt=0.0, lt=1.0)
+    dtype_score: float = Field(gt=0.0, lt=1.0)
+    duplicate_score: float = Field(gt=0.0, lt=1.0)
+    outlier_score: float = Field(gt=0.0, lt=1.0)
+    efficiency_penalty: float = Field(gt=0.0, lt=1.0)
     done: bool
     info: Dict[str, Any] = {}
 
@@ -40,5 +40,5 @@ class EnvironmentState(BaseModel):
     step_number: int
     max_steps: int
     done: bool
-    current_score: float = Field(ge=0.0, le=1.0)
+    current_score: float = Field(gt=0.0, lt=1.0)
     dataset_shape: List[int]
