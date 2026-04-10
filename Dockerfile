@@ -10,8 +10,9 @@ COPY . .
 
 EXPOSE 7860
 
-ENV API_BASE_URL="https://api.openai.com/v1"
-ENV MODEL_NAME="gpt-4o-mini"
+ENV API_BASE_URL="https://api-inference.huggingface.co/v1"
+ENV MODEL_NAME="meta-llama/Llama-3.3-70B-Instruct"
 ENV HF_TOKEN=""
+ENV OPENAI_API_KEY=""
 
 CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "7860"]
