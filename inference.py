@@ -157,6 +157,7 @@ def run_task(task_id: str) -> float:
             step_count = step + 1
             break
 
+    final_score = max(0.001, min(0.999, final_score))  
     print(f"[END] task={task_id} score={final_score:.3f} steps={step_count}", flush=True)
     return final_score
 
@@ -165,9 +166,12 @@ if __name__ == "__main__":
 
     scores = {}
     for task_id in ["task1", "task2", "task3"]:
-        scores[task_id] = run_task(task_id)
+        raw = run_task(task_id)
+        scores[task_id] = max(0.001, min(0.999, raw))  # ✅ clamp here
 
     avg = sum(scores.values()) / len(scores)
+    avg = max(0.001, min(0.999, avg))  # ✅ clamp avg too
+
     for task_id, score in scores.items():
         print(f"[STEP] task=results {task_id}={score:.3f}", flush=True)
 
