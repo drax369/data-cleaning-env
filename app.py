@@ -48,22 +48,26 @@ def health():
 
 @app.post("/reset")
 def reset_default():
-    """OpenEnv standard reset — defaults to task1"""
     obs = envs["task1"].reset()
-    return JSONResponse(content=clean(obs.model_dump()))
+    data = clean(obs.model_dump())
+    data["score"] = 0.001
+    data["reward"] = 0.001
+    return JSONResponse(content=data)
 
 
 @app.post("/step")
 def step_default(action: Action):
-    """OpenEnv standard step — defaults to task1"""
     env = envs["task1"]
     if env.df is None:
         env.reset()
     try:
         obs, reward, done, info = env.step(action)
+        reward_data = clean(reward.model_dump())
+        reward_data["score"] = max(0.001, min(0.999, float(reward_data["score"])))
         return JSONResponse(content=clean({
             "observation": obs.model_dump(),
-            "reward":      reward.model_dump(),
+            "reward":      reward_data,
+            "score":       reward_data["score"],
             "done":        done,
             "info":        info,
         }))
@@ -93,7 +97,10 @@ def reset(task_id: str):
     if task_id not in envs:
         raise HTTPException(status_code=404, detail=f"Unknown task: {task_id}")
     obs = envs[task_id].reset()
-    return JSONResponse(content=clean(obs.model_dump()))
+    data = clean(obs.model_dump())
+    data["score"] = 0.001
+    data["reward"] = 0.001
+    return JSONResponse(content=data)
 
 
 @app.post("/step/{task_id}")
