@@ -4,7 +4,7 @@ from typing import Dict, Tuple
 
 
 def clamp(score: float) -> float:
-    return round(max(0.001, min(0.999, float(score))), 3)
+    return round(max(0.0, min(1.0, float(score))), 3)
 def to_python(obj):
     """Convert numpy types to native Python types for JSON serialization."""
     if isinstance(obj, dict):
